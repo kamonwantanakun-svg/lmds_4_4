@@ -1,0 +1,459 @@
+Logistics_Master_Data_System_V4.1
+17 Modules
+Config.gs
+Menu.gs
+Service_Master.gs
+Service_SCG.gs
+Service_GeoAddr.gs
+Utils_Common.gs
+Service_AutoPilot.gs
+WebApp.gs
+Service_Search.gs
+Index.html
+Setup_Upgrade.gs
+Test_AI.gs
+Service_Agent.gs
+Setup_Security.gs
+Service_Maintenance.gs
+Service_Notify.gs
+Test_Diagnostic.gs
+
+🔢 MODULE VERSIONING SYSTEM
+ระบบนี้ใช้ Version Number ที่ด้านบนของทุกโมดูลเพื่อการตรวจสอบและติดตามการเปลี่ยนแปลง
+ความหมายของตัวเลข
+Versionความหมาย000โมดูลที่ ยังไม่ได้ตรวจสอบ — สถานะเริ่มต้น001โมดูลที่ ตรวจสอบแล้ว — ไม่ว่าจะแก้ไขหรือไม่002, 003, ...แก้ไขซ้ำ — เลขเพิ่มขึ้นทุกครั้งที่มีการแก้ไขในรอบถัดไป
+กฎการอัปเดต Version (บังคับทุกครั้ง)
+STEP 1: แก้ไขโมดูลที่ถูกร้องขอ → เปลี่ยน VERSION เป็น NNN+1
+STEP 2: ตรวจสอบโมดูลที่เหลือทุกตัวว่ามี dependency หรือไม่
+        → ถ้าเกี่ยวข้อง: แก้ไขให้สอดคล้อง → เปลี่ยน VERSION
+        → ถ้าไม่เกี่ยวข้อง: เปลี่ยน VERSION เพื่อยืนยันว่าตรวจสอบแล้ว
+STEP 3: ส่งโมดูลทั้งหมดกลับ — ทุกโมดูลต้องมี VERSION เท่ากัน
+รูปแบบ Version Tag ในโค้ด
+javascript
+
+// VERSION: 000
+// ============================================================
+// FILE: core/Config.gs
+
+
+ห้าม: ส่งโมดูลที่ VERSION ยังเป็น 000 กลับหลังได้รับคำขอแก้ไขแล้ว
+เมื่อได้รับคำขอแก้ไขโค้ด:
+1. แก้ไขโมดูลที่ถูกร้องขอ → เพิ่ม VERSION
+2. ตรวจ dependency โมดูลที่เหลือทุกตัว → เพิ่ม VERSION ทุกตัว
+3. ส่งคืนทุกโมดูลพร้อมสรุปว่าแก้ไขอะไรบ้าง
+4. ห้าม ส่งโมดูลที่ VERSION ยังเป็น 000 กลับ หากได้รับคำขอแก้ไขแล้ว
+
+
+Config.gs
+/**
+ * VERSION: 001
+ * 🚛 Logistics Master Data System - Configuration V4.0 (Enterprise Edition)
+ * ------------------------------------------------------------------
+ * [PRESERVED]: โครงสร้างเดิมคอลัมน์ A-Q ทั้งหมดได้รับการรักษาไว้ (Preservation Protocol)
+ * [ADDED v4.0]: กำหนดคอลัมน์ NameMapping สำหรับ 5-Tier AI Resolution
+ * [MODIFIED v4.0]: อัปเกรด AI_MODEL เป็นเวอร์ชันล่าสุดเพื่อความเสถียร
+ * [MODIFIED v4.0]: อัปเกรดระบบ Logging เป็น console.log/error สำหรับ GCP Monitoring
+ * Author: Elite Logistics Architect
+ */
+
+
+var CONFIG = {
+  // --- SHEET NAMES ---
+  SHEET_NAME: "Database",
+  MAPPING_SHEET: "NameMapping",
+  SOURCE_SHEET: "SCGนครหลวงJWDภูมิภาค",
+  SHEET_POSTAL: "PostalRef", // สำคัญ: ใช้สำหรับ Service_GeoAddr ในการแกะที่อยู่ Offline [12]
+
+
+  // --- 🧠 AI CONFIGURATION (SECURED) ---
+  // วิธีตั้งค่า: รันฟังก์ชัน setupEnvironment() ในไฟล์ Setup_Security.gs [10]
+  get GEMINI_API_KEY() {
+    var key = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    if (!key) throw new Error("CRITICAL ERROR: GEMINI_API_KEY is not set. Please run setupEnvironment() first.");
+    return key;
+  },
+  USE_AI_AUTO_FIX: true,
+  AI_MODEL: "gemini-1.5-flash", // แนะนำรุ่นมาตรฐานเพื่อความเสถียรของ Response Mime Type [6]
+  AI_BATCH_SIZE: 20, // จำกัดจำนวนส่งให้ AI ครั้งละ 20 รายการเพื่อไม่ให้เกิน 6 นาที [10]
+
+
+  // --- 🔴 DEPOT LOCATION (จุดเริ่มต้นคำนวณระยะทาง) ---
+  DEPOT_LAT: 14.164688,
+  DEPOT_LNG: 100.625354,
+
+
+  // --- SYSTEM THRESHOLDS & LIMITS ---
+  DISTANCE_THRESHOLD_KM: 0.05, // 50 เมตร สำหรับการจัดกลุ่ม (Clustering) [13]
+  BATCH_LIMIT: 50,             // โควตา Geocoding ต่อรอบ
+  DEEP_CLEAN_LIMIT: 100,       // จำนวนแถวที่ตรวจสอบความสมบูรณ์ต่อรอบ [14]
+  API_MAX_RETRIES: 3,          // จำนวนครั้งที่จะลองใหม่ถ้า API ภายนอกล่ม
+  API_TIMEOUT_MS: 30000,       // 30 วินาที
+  CACHE_EXPIRATION: 21600,     // 6 ชั่วโมง (สำหรับผลลัพธ์ Google Maps) [14]
+
+
+  // --- ⚠️ SACRED SCHEMA: DATABASE COLUMNS INDEX (1-BASED) ---
+  // ห้ามขยับคอลัมน์ A-Q (1-17) โดยเด็ดขาด [14]-[15]
+  COL_NAME: 1,       // A: ชื่อลูกค้า
+  COL_LAT: 2,        // B: Latitude
+  COL_LNG: 3,        // C: Longitude
+  COL_SUGGESTED: 4,  // D: ชื่อที่ระบบแนะนำ (AI/Human)
+  COL_CONFIDENCE: 5, // E: คะแนนความมั่นใจ
+  COL_NORMALIZED: 6, // F: ชื่อที่ทำ Cleansing และ Keyword สำหรับค้นหา
+  COL_VERIFIED: 7,   // G: สถานะตรวจสอบ (Checkbox)
+  COL_SYS_ADDR: 8,   // H: ที่อยู่จากระบบต้นทาง
+  COL_ADDR_GOOG: 9,  // I: ที่อยู่ยืนยันจาก Google Maps
+  COL_DIST_KM: 10,   // J: ระยะทางจากคลัง (กม.)
+  COL_UUID: 11,      // K: รหัสประจำตัว (Primary Key)
+  COL_PROVINCE: 12,  // L: จังหวัด
+  COL_DISTRICT: 13,  // M: อำเภอ
+  COL_POSTCODE: 14,  // N: รหัสไปรษณีย์
+  COL_QUALITY: 15,   // O: คะแนนคุณภาพข้อมูล (0-100)
+  COL_CREATED: 16,   // P: วันที่สร้าง
+  COL_UPDATED: 17,   // Q: วันที่แก้ไขล่าสุด
+
+
+  // --- [NEW v4.0] NAMEMAPPING COLUMNS INDEX (1-BASED) ---
+  // โครงสร้าง 5-Tier สำหรับ AI Resolution [16]
+  MAP_COL_VARIANT: 1,    // A: Variant_Name
+  MAP_COL_UID: 2,        // B: Master_UID
+  MAP_COL_CONFIDENCE: 3, // C: Confidence_Score
+  MAP_COL_MAPPED_BY: 4,  // D: Mapped_By
+  MAP_COL_TIMESTAMP: 5,  // E: Timestamp
+
+
+  // --- DATABASE ARRAY INDEX MAPPING (0-BASED) ---
+  get C_IDX() {
+    return {
+      NAME: this.COL_NAME - 1, LAT: this.COL_LAT - 1, LNG: this.COL_LNG - 1,
+      SUGGESTED: this.COL_SUGGESTED - 1, CONFIDENCE: this.COL_CONFIDENCE - 1,
+      NORMALIZED: this.COL_NORMALIZED - 1, VERIFIED: this.COL_VERIFIED - 1,
+      SYS_ADDR: this.COL_SYS_ADDR - 1, GOOGLE_ADDR: this.COL_ADDR_GOOG - 1,
+      DIST_KM: this.COL_DIST_KM - 1, UUID: this.COL_UUID - 1,
+      PROVINCE: this.COL_PROVINCE - 1, DISTRICT: this.COL_DISTRICT - 1,
+      POSTCODE: this.COL_POSTCODE - 1, QUALITY: this.COL_QUALITY - 1,
+      CREATED: this.COL_CREATED - 1, UPDATED: this.COL_UPDATED - 1
+    };
+  },
+
+
+  // --- NAMEMAPPING ARRAY INDEX (0-BASED) ---
+  get MAP_IDX() {
+    return {
+      VARIANT: this.MAP_COL_VARIANT - 1,
+      UID: this.MAP_COL_UID - 1,
+      CONFIDENCE: this.MAP_COL_CONFIDENCE - 1,
+      MAPPED_BY: this.MAP_COL_MAPPED_BY - 1,
+      TIMESTAMP: this.MAP_COL_TIMESTAMP - 1
+    };
+  }
+};
+
+
+// --- SCG SPECIFIC CONFIG --- [17]
+const SCG_CONFIG = {
+  SHEET_DATA: 'Data',
+  SHEET_INPUT: 'Input',
+  SHEET_EMPLOYEE: 'ข้อมูลพนักงาน',
+  API_URL: 'https://fsm.scgjwd.com/Monitor/SearchDelivery',
+  INPUT_START_ROW: 4,
+  COOKIE_CELL: 'B1',
+  SHIPMENT_STRING_CELL: 'B3',
+  SHEET_MASTER_DB: 'Database',
+  SHEET_MAPPING: 'NameMapping',
+  JSON_MAP: {
+    SHIPMENT_NO: 'shipmentNo',
+    CUSTOMER_NAME: 'customerName',
+    DELIVERY_DATE: 'deliveryDate'
+  }
+};
+
+
+/**
+ * [ENHANCED v4.0] System Health Check
+ * ตรวจสอบความพร้อมของ Sheet และ Config ก่อนเริ่มงาน [8]-[18]
+ */
+CONFIG.validateSystemIntegrity = function() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var errors = [];
+
+
+  // 1. Check Sheets Existence
+  var requiredSheets = [this.SHEET_NAME, this.MAPPING_SHEET, SCG_CONFIG.SHEET_INPUT, this.SHEET_POSTAL];
+  requiredSheets.forEach(function(name) {
+    if (!ss.getSheetByName(name)) errors.push("Missing Sheet: " + name);
+  });
+
+
+  // 2. Check API Key ความปลอดภัยสูง
+  try {
+    var key = this.GEMINI_API_KEY;
+    if (!key || key.length < 30 || !key.startsWith("AIza")) {
+      errors.push("Invalid Gemini API Key format (Must start with 'AIza' and be > 30 chars)");
+    }
+  } catch (e) {
+    errors.push("Gemini API Key is not set in ScriptProperties. Please run setupEnvironment() first.");
+  }
+
+
+  // 3. Report & Monitoring
+  if (errors.length > 0) {
+    var msg = "⚠️ SYSTEM INTEGRITY FAILED:\n" + errors.join("\n");
+    console.error(msg); 
+    throw new Error(msg);
+  } else {
+    console.log("✅ System Integrity: OK");
+    return true;
+  }
+};
+Service_SCG.gs
+/**
+ * VERSION: 001
+ * 📦 Service: SCG Operation (Enterprise Edition)
+ * Version: 5.0 ScanDocs + Summary Readiness
+ * ---------------------------------------------------------
+ * [PRESERVED v4.0]: API Retry Mechanism, LockService, Smart Branch Matching [1]
+ * [PRESERVED v4.0]: AI NameMapping schema (Variant -> Master_UID -> Coordinates) [19]
+ * [UPDATED v5.0]: checkIsEPOD() — Logic ใหม่รองรับ Invoice ทุกช่วงตัวเลข [5]
+ * [UPDATED v5.0]: buildOwnerSummary() — เพิ่ม จำนวน_E-POD_ทั้งหมด [20]
+ * [ADDED v5.0]: buildShipmentSummary() — สรุปตาม Shipment+TruckLicense [9]
+ * Author: Elite Logistics Architect
+ */
+
+
+// ==========================================
+// 1. MAIN OPERATION: FETCH DATA FROM FSM
+// ==========================================
+
+
+function fetchDataFromSCGJWD() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+  const lock = LockService.getScriptLock();
+  
+  // ป้องกันการรันซ้อนกัน (Lock 10 วินาที) [11]
+  if (!lock.tryLock(10000)) {
+    ui.alert("⚠️ ระบบคิวทำงาน", "มีผู้ใช้งานอื่นกำลังโหลดข้อมูล Shipment อยู่ กรุณารอสักครู่", ui.ButtonSet.OK);
+    return;
+  }
+
+
+  try {
+    const inputSheet = ss.getSheetByName(SCG_CONFIG.SHEET_INPUT);
+    const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
+    if (!inputSheet || !dataSheet) throw new Error("CRITICAL: ไม่พบชีต Input หรือ Data [10]");
+
+
+    const cookie = inputSheet.getRange(SCG_CONFIG.COOKIE_CELL).getValue();
+    if (!cookie) throw new Error("❌ กรุณาวาง Cookie ในช่อง " + SCG_CONFIG.COOKIE_CELL + " [11]");
+
+
+    const lastRow = inputSheet.getLastRow();
+    if (lastRow < SCG_CONFIG.INPUT_START_ROW) throw new Error("ℹ️ ไม่พบเลข Shipment ในชีต Input [21]");
+
+
+    const shipmentNumbers = inputSheet
+      .getRange(SCG_CONFIG.INPUT_START_ROW, 1, lastRow - SCG_CONFIG.INPUT_START_ROW + 1, 1)
+      .getValues().flat().filter(String);
+
+
+    if (shipmentNumbers.length === 0) throw new Error("ℹ️ รายการ Shipment ว่างเปล่า");
+
+
+    const shipmentString = shipmentNumbers.join(',');
+    inputSheet.getRange(SCG_CONFIG.SHIPMENT_STRING_CELL).setValue(shipmentString);
+
+
+    const payload = { ShipmentNos: shipmentString };
+    const options = { method: 'post', payload: payload, muteHttpExceptions: true, headers: { cookie: cookie } };
+
+
+    ss.toast("กำลังเชื่อมต่อ SCG Server...", "System", 10);
+    const responseText = fetchWithRetry_(SCG_CONFIG.API_URL, options, (CONFIG.API_MAX_RETRIES || 3)); [22]
+    
+    const json = JSON.parse(responseText);
+    const shipments = json.data || [];
+    if (shipments.length === 0) throw new Error("API ไม่พบข้อมูล Shipment (Data Empty) [23]");
+
+
+    const allFlatData = [];
+    let runningRow = 2;
+
+
+    // กระบวนการคลายโครงสร้าง Data Flattening [7], [8]
+    shipments.forEach(shipment => {
+      const destSet = new Set();
+      (shipment.DeliveryNotes || []).forEach(n => { if (n.ShipToName) destSet.add(n.ShipToName); });
+
+
+      (shipment.DeliveryNotes || []).forEach(note => {
+        (note.Items || []).forEach(item => {
+          const row = [
+            note.PurchaseOrder + "-" + runningRow, // ID_งานประจำวัน
+            note.PlanDelivery ? new Date(note.PlanDelivery) : null,
+            String(note.PurchaseOrder),
+            String(shipment.ShipmentNo),
+            shipment.DriverName,
+            shipment.TruckLicense,
+            String(shipment.CarrierCode),
+            shipment.CarrierName,
+            String(note.SoldToCode),
+            note.SoldToName,
+            note.ShipToName,
+            note.ShipToAddress,
+            note.ShipToLatitude + ", " + note.ShipToLongitude,
+            item.MaterialName,
+            item.ItemQuantity,
+            item.QuantityUnit,
+            item.ItemWeight,
+            String(note.DeliveryNo),
+            destSet.size, // จำนวนปลายทางใน Shipment นี้
+            Array.from(destSet).join(", "), // รายชื่อปลายทาง
+            "รอสแกน", "ยังไม่ได้ส่ง", "", 0, 0, 0, "", "", 
+            shipment.ShipmentNo + "|" + note.ShipToName // ShopKey [24]
+          ];
+          allFlatData.push(row);
+          runningRow++;
+        });
+      });
+    });
+
+
+    // คำนวณยอดรวมระดับร้านค้า (Aggregation) [25]
+    const shopAgg = {};
+    allFlatData.forEach(r => {
+      const key = r[26];
+      if (!shopAgg[key]) shopAgg[key] = { qty: 0, weight: 0, invoices: new Set(), epod: 0 };
+      shopAgg[key].qty += Number(r[27]) || 0;
+      shopAgg[key].weight += Number(r[28]) || 0;
+      shopAgg[key].invoices.add(r[29]);
+      if (checkIsEPOD(r[30], r[29])) shopAgg[key].epod++;
+    });
+
+
+    allFlatData.forEach(r => {
+      const agg = shopAgg[r[26]];
+      r[9] = agg.qty;
+      r[17] = Number(agg.weight.toFixed(2));
+      r[31] = agg.invoices.size - agg.epod; // จำนวน Invoice ที่ต้องสแกนจริง
+      r[32] = `${r[30]} / รวม ${r[31]} บิล`;
+    });
+
+
+    // เขียนข้อมูลลงชีต Data [16]
+    dataSheet.clear();
+    const headers = ["ID_งานประจำวัน", "PlanDelivery", "InvoiceNo", "ShipmentNo", "DriverName", "TruckLicense", "CarrierCode", "CarrierName", "SoldToCode", "SoldToName", "ShipToName", "ShipToAddress", "LatLong_SCG", "MaterialName", "ItemQuantity", "QuantityUnit", "ItemWeight", "DeliveryNo", "จำนวนปลายทาง_System", "รายชื่อปลายทาง_System", "ScanStatus", "DeliveryStatus", "Email พนักงาน", "จำนวนสินค้ารวมของร้านนี้", "น้ำหนักสินค้ารวมของร้านนี้", "จำนวน_Invoice_ที่ต้องสแกน", "LatLong_Actual", "ชื่อเจ้าของสินค้า_Invoice_ที่ต้องสแกน", "ShopKey"];
+    dataSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+    
+    if (allFlatData.length > 0) {
+      dataSheet.getRange(2, 1, allFlatData.length, headers.length).setValues(allFlatData);
+      dataSheet.getRange(2, 2, allFlatData.length, 1).setNumberFormat("dd/mm/yyyy");
+    }
+
+
+    // รันฟังก์ชันพ่วงหลังโหลดข้อมูลสำเร็จ [33]
+    applyMasterCoordinatesToDailyJob();
+    buildOwnerSummary();
+    buildShipmentSummary();
+    
+    ui.alert(`✅ ดึงข้อมูลสำเร็จ!\n- จำนวนรายการ: ${allFlatData.length} แถว\n- จับคู่พิกัดและสร้างสรุปเรียบร้อย`);
+    
+  } catch (e) {
+    console.error("[SCG API Error]: " + e.message);
+    ui.alert("❌ เกิดข้อผิดพลาด: " + e.message);
+  } finally { lock.releaseLock(); }
+}
+
+
+// ==========================================
+// 2. COORDINATE MATCHING (RELATIONAL UUID)
+// ==========================================
+
+
+function applyMasterCoordinatesToDailyJob() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dataSheet = ss.getSheetByName(SCG_CONFIG.SHEET_DATA);
+  const dbSheet = ss.getSheetByName(SCG_CONFIG.SHEET_MASTER_DB);
+  const mapSheet = ss.getSheetByName(SCG_CONFIG.SHEET_MAPPING);
+  if (!dataSheet || !dbSheet) return;
+
+
+  const lastRow = dataSheet.getLastRow();
+  if (lastRow < 2) return;
+
+
+  // โหลด Master Data พร้อม UUID สำหรับ Relational Lookup [12], [34]
+  const masterCoords = {};
+  const masterUUIDCoords = {};
+  if (dbSheet.getLastRow() > 1) {
+    const dbData = dbSheet.getRange(2, 1, dbSheet.getLastRow() - 1, 15).getValues();
+    dbData.forEach(r => {
+      const name = r[CONFIG.C_IDX.NAME], lat = r[CONFIG.C_IDX.LAT], lng = r[CONFIG.C_IDX.LNG], uuid = r[CONFIG.C_IDX.UUID];
+      if (name && lat && lng) {
+        const coords = lat + ", " + lng;
+        masterCoords[normalizeText(name)] = coords;
+        if (uuid) masterUUIDCoords[uuid] = coords;
+      }
+    });
+  }
+
+
+  // โหลด NameMapping 5-Tier (Variant -> Master_UID) [28], [35]
+  const aliasMap = {};
+  if (mapSheet && mapSheet.getLastRow() > 1) {
+    mapSheet.getRange(2, 1, mapSheet.getLastRow() - 1, 2).getValues().forEach(r => {
+      if (r && r[36]) aliasMap[normalizeText(r)] = r[36];
+    });
+  }
+
+
+  const values = dataSheet.getRange(2, 1, lastRow - 1, 29).getValues();
+  const latLongUpdates = [], bgUpdates = [];
+
+
+  values.forEach(r => {
+    let newGeo = "", bg = null;
+    if (r[37]) {
+      let rawName = normalizeText(r[37]);
+      let targetUID = aliasMap[rawName];
+      
+      // Step 1: หาจาก UID (แม่นยำที่สุด) [4]
+      if (targetUID && masterUUIDCoords[targetUID]) { newGeo = masterUUIDCoords[targetUID]; bg = "#b6d7a8"; }
+      // Step 2: หาจากชื่อตรง
+      else if (masterCoords[rawName]) { newGeo = masterCoords[rawName]; bg = "#b6d7a8"; }
+      // Step 3: เดาจากชื่อสาขา (Smart Branch Matching) [5], [38]
+      else {
+        let branchMatch = tryMatchBranch_(r[37], masterCoords);
+        if (branchMatch) { newGeo = branchMatch; bg = "#ffe599"; }
+      }
+    }
+    latLongUpdates.push([newGeo]);
+    bgUpdates.push([bg]);
+  });
+
+
+  dataSheet.getRange(2, 27, latLongUpdates.length, 1).setValues(latLongUpdates);
+  dataSheet.getRange(2, 27, bgUpdates.length, 1).setBackgrounds(bgUpdates);
+  ss.toast("✅ อัปเดตพิกัดเรียบร้อย", "System");
+}
+
+
+// ==========================================
+// 3. E-POD LOGIC & HELPERS
+// ==========================================
+
+
+function checkIsEPOD(ownerName, invoiceNo) {
+  if (!ownerName || !invoiceNo) return false;
+  const owner = String(ownerName).toUpperCase();
+  const inv = String(invoiceNo);
+
+
+  // กลุ่ม 1: EPOD ทุกบิล [39], [6]
+  const epodOwners = ["BETTERBE", "SCG EXPRESS", "เบทเตอร์แลนด์", "JWD TRANSPORT"];
+  if (epodOwners.some(w => owner.includes(w.toUpperCase()))) return true;
+
+
+  // กลุ่ม 2: เงื่อนไขพิเศษ DENSO [39], [40]
+  if (owner.includes("DENSO") || owner.includes("เด็นโซ่")) {
+    if (inv.inc
+(Content truncated due to size limit. Use line ranges to read remaining content)

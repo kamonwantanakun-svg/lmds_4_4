@@ -1,0 +1,23 @@
+# Implementation Plan (Updated per SOP)
+
+เป้าหมาย: ทำให้ระบบฐานข้อมูลและเมนูทำงานได้จริงตามคู่มือ SOP ล่าสุด โดยคงความเสถียรของ SCG Menu ไว้ และตัดเมนูที่ไม่ต้องการ (4, 6, 7, 8) ออก
+
+## 1. ปรับปรุง Menu.gs ตาม SOP
+- คงเมนู `1`, `2`, `3` ไว้
+- เพิ่มเมนู `🤖 4. Agent System` (เดิมคือเบอร์ 5 ใน SOP ปรับลำดับให้สวยงาม) ซึ่งจะทำหน้าที่ Dispatch AI Agent แบบต่างๆ ได้แก่ Name Resolution, Coordinate Check, Address Parser
+- อัปเดตเมนู `⚙️ 5. System Admin` (เดิมคือ 9) ให้มี Migration V5, ตั้งค่าระดับความปลอดภัยครบถ้วน
+
+## 2. โอนย้ายระบบ Agent System
+- นำโค้ดที่รัน Agent ต่างๆ (Name, Coordinate, Address) จาก `codex_lmds6` มาติดตั้งให้ทำงานได้จริง
+
+## 3. แก้ไขข้อผิดพลาด (Troubleshooting) Clustering
+- **ปัญหา:** ปุ่ม `3️⃣ จัดกลุ่มชื่อซ้ำ (Clustering)` แจ้ง error `aiplatform` (เนื่องจากเรียกใช้ Gemini AI ระหว่างการจัดกลุ่ม)
+- **การแก้ไข:** ปรับปรุงฟังก์ชัน [getBestName_Smart()](file:///g:/%E0%B9%84%E0%B8%94%E0%B8%A3%E0%B8%9F%E0%B9%8C%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%89%E0%B8%B1%E0%B8%99/%E0%B9%81%E0%B8%8A%E0%B8%A3%E0%B9%8C%E0%B9%84%E0%B8%9F%E0%B8%A5%E0%B9%8C_Kamonwantanakun/%F0%9F%9A%9B%20Logistics%20Master%20Data%20System/kop_lmds/kop_lmds4/Utils_Common.gs#76-132) หรือ helper ที่เกี่ยวข้อง ให้สามารถจัดกลุ่มจบได้ในตัวโดยพึ่งพาสถิติ/String Matching แทนการเรียก AI หรือจัดการ try-catch อย่างปลอดภัย ไม่ให้ error ขัดจังหวะการทำงาน
+
+## 4. โครงสร้าง Database V5
+- รักษาโครงสร้างชีตให้สามารถกดรัน `Migration V5` ได้เพื่อให้รองรับ 22 คอลัมน์อย่างสมบูรณ์
+
+## Verification Plan
+- ทดสอบการแสดงผลของเมนูว่าเหลือ 5 หมวดหลักตามที่ตั้งใจ
+- ทดสอบกดปุ่ม [Clustering](file:///g:/%E0%B9%84%E0%B8%94%E0%B8%A3%E0%B8%9F%E0%B9%8C%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B8%89%E0%B8%B1%E0%B8%99/%E0%B9%81%E0%B8%8A%E0%B8%A3%E0%B9%8C%E0%B9%84%E0%B8%9F%E0%B8%A5%E0%B9%8C_Kamonwantanakun/%F0%9F%9A%9B%20Logistics%20Master%20Data%20System/kop_lmds/kop_lmds4/Service_Master.gs#386-492) เพื่อยืนยันว่าไม่มี Error `aiplatform` เด้งขึ้นมาอีก
+- ทดสอบระบบตั้งค่า Key ว่าบันทึกค่าลง Properties ได้ถูกต้อง

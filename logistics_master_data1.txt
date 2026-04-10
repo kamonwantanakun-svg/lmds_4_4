@@ -1,0 +1,50 @@
+
+
+
+Index.html
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+ <head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ค้นหาพิกัดลูกค้า (V4.0)</title>
+  <!-- Font & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  
+  <style>
+    /* --- CORE LAYOUT --- */
+    :root {
+      /* [MODIFIED v4.0] Enterprise Gradient Color */
+      --primary-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --bg-color: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+    }
+
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: var(--bg-color); 
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Prevent body scroll, use container scroll */
+    }
+    
+    .app-container {
+      width: 100%;
+      height: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    
+    /* --- 1. STICKY HEADER --- */
+    .header-section {

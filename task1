@@ -1,0 +1,14 @@
+# 📋 Task: Enterprise Upgrade (Auto-Pilot / Notify / Hub Tagging)
+
+- `[x]` **1. ปรับปรุงระบบ Automation (Service_AutoPilot.gs & Menu.gs)**
+  - `[x]` สร้างฟังก์ชัน `runNightlyBatchRoutine()` ให้ทำงาน: Sync -> AutoMerge -> AI -> HubTagging
+  - `[x]` ปรับ `autoPilotRoutine()` (10 นาที) ให้เหลือหน้าที่แค่ Sync GPS กลับไปที่ชีต Data ป้องกัน API ชนกัน และเช็คคิว
+  - `[x]` ปรับปรุงเมนูเกี่ยวกับการสร้าง Trigger ของ Nightly Batch
+- `[x]` **2. สร้างระบบแจ้งเตือน (Service_AutoPilot.gs)**
+  - `[x]` เพิ่มฟังก์ชันเช็คจำนวนแถวใน `GPS_Queue`
+  - `[x]` แจ้งเตือนผ่าน LINE Notify (ใช้ฟังก์ชันใน `Service_Notify.gs` ที่มีอยู่) หากมีรายการให้ Approve
+- `[x]` **3. ระบบติดแท็ก Hub ตึกเดียวกัน (Service_Master.gs)**
+  - `[x]` สร้างฟังก์ชัน `scanAndTagCoLocatedHubs()` เพื่อจับคู่พิกัดระยะ < 10 เมตร
+  - `[x]` แทรกรีมาร์ก `[HUB ร่วม]` เข้าไปในส่วนของที่อยู่
+- `[x]` **4. สร้างรายงานสรุป (Walkthrough)**
+  - `[x]` สรุปการตั้งเวลา Trigger และการส่งมอบงาน
